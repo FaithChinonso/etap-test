@@ -84,6 +84,7 @@ const MapViewComponent = ({
   const checkGeofence = (coords: Coordinates): void => {
     if (geofence) {
       const distance = calculateDistance(coords, geofence.center);
+      console.log(distance, 'dis', geofence.radius);
       if (distance < geofence.radius) {
         Alert.alert('Entered geofence');
       } else {
@@ -107,7 +108,7 @@ const MapViewComponent = ({
       center: coordinateValue,
       radius: +radius,
     });
-
+    console.log(coordinateValue, 'coor');
     setRegion({
       ...coordinateValue,
       latitudeDelta: zoomLevel.latitudeDelta,
@@ -125,6 +126,7 @@ const MapViewComponent = ({
 
   const handleMapPress = (e): void => {
     const {coordinate} = e.nativeEvent;
+    console.log('first', coordinate);
     checkGeofence(coordinate);
   };
 
@@ -137,6 +139,7 @@ const MapViewComponent = ({
           latitudeDelta: 0.00922,
           longitudeDelta: 0.00421,
         });
+
         checkGeofence(position.coords);
       };
 
@@ -192,16 +195,25 @@ const MapViewComponent = ({
       Geolocation.watchPosition(
         position => {
           const {latitude, longitude} = position.coords;
-          setRegion({
+          setRegion(prevRegion => ({
+            ...prevRegion,
             latitude,
             longitude,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          });
+            latitudeDelta: prevRegion.latitudeDelta,
+            longitudeDelta: prevRegion.longitudeDelta,
+          }));
+          console.log('Position updated:', position.coords);
           checkGeofence(position.coords);
         },
-        error => console.log(error),
-        {enableHighAccuracy: true, distanceFilter: 10},
+        error => {
+          console.log('Error in watchPosition:', error);
+        },
+        {
+          enableHighAccuracy: true,
+          distanceFilter: 0.1, // Adjusted distanceFilter for more frequent updates
+          interval: 10000, // Optional: Time in milliseconds between updates
+          fastestInterval: 5000, // Optional: Fastest interval for location updates
+        },
       );
     } catch (error) {
       console.log(error);
@@ -233,6 +245,12 @@ const MapViewComponent = ({
         region={region}
         onLongPress={handleMapLongPress}
         zoomEnabled>
+        <Marker
+          coordinate={region}
+          tappable
+          description="Me"
+          title="Geofence Center"
+        />
         {geofence && (
           <>
             <Marker
